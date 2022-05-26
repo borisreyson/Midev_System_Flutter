@@ -526,6 +526,7 @@ class _HazardMenuState extends State<HazardMenu> {
     );
   }
 
+  // ignore: unused_element
   Widget _inspeksi() {
     return Card(
       elevation: 10,

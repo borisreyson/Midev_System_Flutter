@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:midev_system_fl/hse/models/all_hazard_model.dart';
 import 'package:midev_system_fl/hse/models/counter_hazard.dart';
+import 'package:midev_system_fl/hse/models/data_hazard.dart';
 import 'package:midev_system_fl/hse/models/hazard_model.dart';
 import 'package:midev_system_fl/hse/models/hazard_post.dart';
 import 'package:midev_system_fl/hse/models/hazard_user.dart';
@@ -119,6 +120,8 @@ class UsersProvider {
 }
 
 class HazardProvider {
+  String baseUrl = "https://lp.abpjobsite.com/api/v1/hazard/";
+
   Future<ResultHazardPost?> postHazard(HazardPostModel data, idDevice) async {
     Map<String, dynamic>? _res;
 
@@ -133,7 +136,7 @@ class HazardProvider {
         "${_dt.second}".padLeft(2, "0") +
         "_${idDevice}_penanggung_jawab.jpg";
 
-    Uri uri = Uri.parse("https://lp.abpjobsite.com/api/v1/hazard");
+    Uri uri = Uri.parse(baseUrl);
 
     var request = http.MultipartRequest("POST", uri);
     request.files.add(http.MultipartFile.fromBytes(
@@ -191,7 +194,7 @@ class HazardProvider {
         "${_dt.second}".padLeft(2, "0") +
         "_${idDevice}_selesai.jpg";
 
-    Uri uri = Uri.parse("https://lp.abpjobsite.com/api/v1/hazard/selesai");
+    Uri uri = Uri.parse("${baseUrl}selesai");
 
     var request = http.MultipartRequest("POST", uri);
 
@@ -247,7 +250,7 @@ class HazardProvider {
         "${_dt.second}".padLeft(2, "0") +
         "_${idDevice}_selesai.jpg";
 
-    Uri uri = Uri.parse("https://lp.abpjobsite.com/api/v1/hazard/update");
+    Uri uri = Uri.parse("${baseUrl}update");
 
     var request = http.MultipartRequest("POST", uri);
 
@@ -256,8 +259,8 @@ class HazardProvider {
         filename: _filename));
 
     request.fields['uid'] = "${data.uid}";
-    request.fields['tgl_selesai'] = "${data.jamSelesai}";
-    request.fields['jam_selesai'] = "${data.tglSelesai}";
+    request.fields['tgl_selesai'] = "${data.tglSelesai}";
+    request.fields['jam_selesai'] = "${data.jamSelesai}";
     request.fields['idKemungkinanSesudah'] = "${data.idKemungkinanSesudah}";
     request.fields['idKeparahanSesudah'] = "${data.idKeparahanSesudah}";
     request.fields['keterangan'] = "${data.keterangan}";
@@ -287,8 +290,7 @@ class HazardProvider {
   }
 
   Future<CounterHazard?> counterHazard(username) async {
-    var api = await http.get(Uri.parse(
-        "https://lp.abpjobsite.com/api/v1/hazard/check?username=$username"));
+    var api = await http.get(Uri.parse("${baseUrl}check?username=$username"));
     var jsonObject = json.decode(api.body);
     var decoJson = CounterHazard.fromJson(jsonObject);
     return decoJson;
@@ -296,8 +298,10 @@ class HazardProvider {
 
   Future<AllHazard?> getAllHazard(
       int disetujui, int page, String dari, String sampai) async {
-    var api = await http.get(Uri.parse(
-        "${Constants.BASEURL}api/v1/hazard/safety?user_valid=$disetujui&page=$page&dari=$dari&sampai=$sampai"));
+    var api = await http.get(
+      Uri.parse(
+          "${Constants.BASEURL}api/v1/hazard/safety?user_valid=$disetujui&page=$page&dari=$dari&sampai=$sampai"),
+    );
 
     var jsonObject = json.decode(api.body);
     var decoJson = AllHazard.fromJson(jsonObject);
@@ -305,12 +309,93 @@ class HazardProvider {
   }
 
   Future<HazardUser?> getHazardUser(
-      username, disetujui, page, dari, sampai) async {
+    username,
+    disetujui,
+    page,
+    dari,
+    sampai,
+  ) async {
     var api = await http.get(Uri.parse(
         "https://abpjobsite.com/android/api/hse/list/hazard/report/online?username=$username&page=$page&dari=$dari&sampai=$sampai&user_valid=$disetujui"));
 
     var jsonObject = json.decode(api.body);
     var decoJson = HazardUser.fromJson(jsonObject);
     return decoJson;
+  }
+
+  Future<ResultHazardPost?> postGambarBukti(
+      HazardGambarBukti data, idDevice) async {
+    Map<String, dynamic>? _res;
+
+    DateTime _dt = DateTime.now();
+
+    String _filename = "${_dt.hour}".padLeft(2, "0") +
+        "${_dt.minute}".padLeft(2, "0") +
+        "${_dt.second}".padLeft(2, "0") +
+        "_${idDevice}_sebelum.jpg";
+
+    Uri uri = Uri.parse("${baseUrl}rubah/gambar/temuan");
+
+    var request = http.MultipartRequest("POST", uri);
+
+    request.files.add(http.MultipartFile.fromBytes(
+        'bukti_sebelum', await data.buktiSebelum!.readAsBytes(),
+        filename: _filename));
+
+    request.fields['uid'] = "${data.uid}";
+
+    var response = await request.send();
+
+    await for (String s in response.stream.transform(utf8.decoder)) {
+      _res = jsonDecode(s);
+    }
+    return ResultHazardPost.fromJson(_res!);
+  }
+
+  Future<ResultHazardPost?> postGambarPerbaikan(
+      HazardGambarPerbaikan data, idDevice) async {
+    Map<String, dynamic>? _res;
+
+    DateTime _dt = DateTime.now();
+
+    String _filename = "${_dt.hour}".padLeft(2, "0") +
+        "${_dt.minute}".padLeft(2, "0") +
+        "${_dt.second}".padLeft(2, "0") +
+        "_${idDevice}_selesai.jpg";
+
+    Uri uri = Uri.parse("${baseUrl}rubah/gambar/perbaikan");
+
+    var request = http.MultipartRequest("POST", uri);
+
+    request.files.add(http.MultipartFile.fromBytes(
+        'bukti_selesai', await data.buktiSelesai!.readAsBytes(),
+        filename: _filename));
+
+    request.fields['uid'] = "${data.uid}";
+
+    var response = await request.send();
+
+    await for (String s in response.stream.transform(utf8.decoder)) {
+      _res = jsonDecode(s);
+    }
+    return ResultHazardPost.fromJson(_res!);
+  }
+
+  Future<Data?> getHazardDetail(
+    uid,
+  ) async {
+    var api = await http.get(Uri.parse("${baseUrl}detail?uid=$uid"));
+
+    var jsonObject = json.decode(api.body);
+    var decoJson = Data.fromJson(jsonObject);
+    return decoJson;
+  }
+
+  Future<ResultHazardPost?> postUpdateDeskripsi(uid, tipe, deskripsi) async {
+    String apiUrl = "${baseUrl}rubah/deskripsi";
+    var apiResult = await http.post(Uri.parse(apiUrl),
+        body: {"uid": uid, "tipe": tipe, "deskripsi": deskripsi});
+    var jsonObject = json.decode(apiResult.body);
+    return ResultHazardPost.fromJson(jsonObject);
   }
 }

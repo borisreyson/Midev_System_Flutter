@@ -10,10 +10,14 @@ import 'package:midev_system_fl/service/service.dart';
 class GambarBloc extends Cubit<GambarState> {
   GambarBloc() : super(InitGambar());
 
-  tampilGambar(String _url) {
+  tampilGambar({String? url}) {
     emit(LoadingGambar());
     try {
-      emit(LoadedGambar(urlImg: _url));
+      if (url != null) {
+        emit(
+          LoadedGambar(urlImg: url),
+        );
+      }
     } catch (e) {
       emit(ErrorGambar(e.toString()));
     }

@@ -80,6 +80,11 @@ class _RubahStatusState extends State<RubahStatus> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text("Update Hazard"),
+          leading: IconButton(
+              onPressed: () {
+                Navigator.pop(context, false);
+              },
+              icon: const Icon(Icons.arrow_back_ios_new_rounded)),
         ),
         body: Form(
           key: _formKey,
@@ -243,7 +248,7 @@ class _RubahStatusState extends State<RubahStatus> {
                       if (jam != null) {
                         setState(() {
                           _jamSelesai.text =
-                              "${jam.hour.toString().padLeft(2, '0')} : ${jam.minute.toString().padLeft(2, '0')}";
+                              "${jam.hour.toString().padLeft(2, '0')}:${jam.minute.toString().padLeft(2, '0')}";
                         });
                       }
                     },
@@ -631,7 +636,7 @@ class _RubahStatusState extends State<RubahStatus> {
                 elevation: 10,
                 child: InkWell(
                   onTap: () {
-                    Navigator.pop(context, "cancel");
+                    Navigator.pop(context, false);
                   },
                   child: const Padding(
                     padding: EdgeInsets.all(8.0),
@@ -656,7 +661,7 @@ class _RubahStatusState extends State<RubahStatus> {
   buktiPicker() async {
     XFile? bukti = await pickerBtmSheet();
     if (bukti != null) {
-      _gambarBloc.tampilGambar(bukti.path);
+      _gambarBloc.tampilGambar(url: bukti.path);
       setState(() {
         _foto = bukti;
       });
@@ -827,7 +832,7 @@ class _RubahStatusState extends State<RubahStatus> {
       await _repository.postUpdateHazard(data, idDevice).then((res) {
         if (res != null) {
           if (res.success) {
-            Navigator.pop(context,res.success);
+            Navigator.pop(context, res.success);
             Navigator.pop(context, res.success);
           } else {
             Navigator.pop(context, false);

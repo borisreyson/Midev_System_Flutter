@@ -45,7 +45,7 @@ class _HazardDetailState extends State<HazardDetail> {
     _pjImgBloc = PjImgBloc();
     _resikoSebelumBloc = ResikoSebelumBloc();
     _resikoSesudahBloc = ResikoSesudahBloc();
-    _gambarBloc.tampilGambar(baseImage + data.bukti!);
+    _gambarBloc.tampilGambar(url: baseImage + data.bukti!);
     if (data.updateBukti != null) {
       _imgPerbaikanBloc.tampilGambar(baseImage + "update/" + data.updateBukti!);
     }
@@ -71,7 +71,7 @@ class _HazardDetailState extends State<HazardDetail> {
           title: const Text("Detail Hazard"),
         ),
         body: _listWidget(),
-        floatingActionButton: (data.statusPerbaikan != "Selesai")
+        floatingActionButton: (data.statusPerbaikan != "SELESAI")
             ? FloatingActionButton(
                 onPressed: () {},
                 child: const Icon(Icons.upload_file_outlined),

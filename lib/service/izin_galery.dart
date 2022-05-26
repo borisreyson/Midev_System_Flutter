@@ -1,18 +1,17 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:midev_system_fl/landing.dart';
-import 'package:midev_system_fl/service/izin_galery.dart';
 import 'package:permission_handler/permission_handler.dart' as handler;
 import 'package:shared_preferences/shared_preferences.dart';
 
-class IzinPenyimpanan extends StatefulWidget {
-  const IzinPenyimpanan({Key? key}) : super(key: key);
+class IzinMedia extends StatefulWidget {
+  const IzinMedia({Key? key}) : super(key: key);
 
   @override
-  State<IzinPenyimpanan> createState() => _IzinPenyimpananState();
+  State<IzinMedia> createState() => _IzinMediaState();
 }
 
-class _IzinPenyimpananState extends State<IzinPenyimpanan> {
+class _IzinMediaState extends State<IzinMedia> {
   bool izinStatus = false;
   int? isLogin;
   bool? intro = false;
@@ -25,8 +24,8 @@ class _IzinPenyimpananState extends State<IzinPenyimpanan> {
       body: Container(
         decoration: const BoxDecoration(
             gradient: LinearGradient(colors: [
-          Color(0xFFF2D0A7),
-          Color(0xFF5D768C),
+          Color.fromARGB(255, 177, 167, 242),
+          Color.fromARGB(255, 60, 12, 133),
         ], begin: Alignment.topCenter, end: Alignment.bottomCenter)),
         child: Center(
           child: Column(
@@ -36,27 +35,27 @@ class _IzinPenyimpananState extends State<IzinPenyimpanan> {
                 const Padding(
                   padding: EdgeInsets.only(bottom: 8.0),
                   child: Text(
-                    "Penggunaan Penyimpanan",
+                    "Penggunaan Galeri",
                     style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
-                        color: Color(0xFF732002)),
+                        color: Color.fromARGB(255, 255, 255, 255)),
                   ),
                 ),
                 const SizedBox(
                     width: 100,
                     height: 100,
-                    child: Icon(Icons.sd_storage_rounded,
-                        size: 100, color: Color(0xFFBF6734))),
+                    child: Icon(Icons.perm_media_outlined,
+                        size: 100, color: Color.fromARGB(255, 250, 250, 250))),
                 const SizedBox(
                   height: 20,
                 ),
                 const Padding(
                   padding: EdgeInsets.all(16.0),
                   child: Text(
-                    "Kami Membutuhkan Penyimpanan Anda untuk melakukan penyimpanan file pengguna, sebagai penyimpanan sementara, jadi Izin untuk penggunaan penyimpanan sangat di perlukan",
+                    "Kami Membutuhkan Galeri Anda untuk melakukan pengambulan file pengguna, sebagai data yand dibutuhkan oleh aplikasi, jadi Izin untuk penggunaan Galeri sangat di perlukan",
                     textAlign: TextAlign.justify,
-                    style: TextStyle(color: Color(0xFF732002)),
+                    style: TextStyle(color: Color.fromARGB(255, 254, 255, 251)),
                   ),
                 ),
                 const SizedBox(
@@ -70,25 +69,18 @@ class _IzinPenyimpananState extends State<IzinPenyimpanan> {
                           return ElevatedButton.icon(
                               label: const Text("Meminta Izin Penyimpanan"),
                               style: ElevatedButton.styleFrom(
-                                  primary:
-                                      const Color.fromARGB(255, 189, 11, 165)),
+                                  primary: const Color.fromARGB(255, 11, 189, 97)),
                               onPressed: () {
                                 getPermission();
                               },
-                              icon: const Icon(Icons.sd_storage_rounded));
+                              icon: const Icon(Icons.perm_media_outlined));
                         } else {
                           return ElevatedButton.icon(
                               label: const Text("Selanjutnya"),
                               style: ElevatedButton.styleFrom(
-                                  primary:
-                                      const Color.fromARGB(255, 189, 11, 165)),
+                                  primary: const Color.fromARGB(255, 85, 189, 11)),
                               onPressed: () {
-                                Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const IzinMedia(),
-                                  ),
-                                );
+                                saveIntro(context);
                               },
                               icon: const Icon(Icons.chevron_right));
                         }
@@ -118,10 +110,10 @@ class _IzinPenyimpananState extends State<IzinPenyimpanan> {
   }
 
   getPermission() async {
-    var mintaIzin = await handler.Permission.storage.status;
+    var mintaIzin = await handler.Permission.photos.status;
     if (mintaIzin == handler.PermissionStatus.denied ||
         mintaIzin == handler.PermissionStatus.limited) {
-      await handler.Permission.storage.request();
+      await handler.Permission.photos.request();
       if (kDebugMode) {
         if (kDebugMode) {
           print("a $mintaIzin");
@@ -140,7 +132,7 @@ class _IzinPenyimpananState extends State<IzinPenyimpanan> {
   }
 
   Future<bool> statusIzin() async {
-    var lokasi = handler.Permission.storage;
+    var lokasi = handler.Permission.photos;
     var status = await lokasi.status;
     if (status == handler.PermissionStatus.granted) {
       izinStatus = true;

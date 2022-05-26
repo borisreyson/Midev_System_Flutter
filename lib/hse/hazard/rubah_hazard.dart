@@ -1,14 +1,25 @@
+// ignore_for_file: unused_field
+
+import 'dart:io';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:midev_system_fl/hse/bloc/bloc.dart';
 import 'package:midev_system_fl/hse/bloc/state.dart';
+import 'package:midev_system_fl/hse/hazard/form/rubah_bahaya.dart';
 import 'package:midev_system_fl/hse/models/data_hazard.dart';
+import 'package:midev_system_fl/hse/models/hazard_model.dart';
+import 'package:midev_system_fl/hse/repository/repository.dart';
 import 'package:midev_system_fl/service/service.dart';
 import 'package:midev_system_fl/utils/constants.dart';
 import 'package:midev_system_fl/utils/image_view.dart';
+import 'package:platform_device_id/platform_device_id.dart';
 
 class RubahHazard extends StatefulWidget {
   final Data? detail;
@@ -19,6 +30,7 @@ class RubahHazard extends StatefulWidget {
 }
 
 class _RubahHazardState extends State<RubahHazard> {
+  final _repository = HazardRepository();
   final KemungkinanService _kmService = KemungkinanService();
   final KeparahanService _kpService = KeparahanService();
   final MetrikService _metrikService = MetrikService();
@@ -29,12 +41,18 @@ class _RubahHazardState extends State<RubahHazard> {
   late PjImgBloc _pjImgBloc;
   late ResikoSebelumBloc _resikoSebelumBloc;
   late ResikoSesudahBloc _resikoSesudahBloc;
-
+  String? idDevice;
   late Data data;
   int? nilaiKpSebelum, nilaiKmSesudah, nilaiKpSesudah;
+  var imagePicker = ImagePicker();
+  XFile? _foto, _perbaikan, _imgPj;
 
   @override
   void initState() {
+    initIdDevice();
+    _foto = null;
+    _perbaikan = null;
+    _imgPj = null;
     data = widget.detail!;
     _getResikoSebelum(data: data);
     if (data.idKemungkinanSesudah != null) {
@@ -45,7 +63,7 @@ class _RubahHazardState extends State<RubahHazard> {
     _pjImgBloc = PjImgBloc();
     _resikoSebelumBloc = ResikoSebelumBloc();
     _resikoSesudahBloc = ResikoSesudahBloc();
-    _gambarBloc.tampilGambar(baseImage + data.bukti!);
+    _gambarBloc.tampilGambar(url: baseImage + data.bukti!);
     if (data.updateBukti != null) {
       _imgPerbaikanBloc.tampilGambar(baseImage + "update/" + data.updateBukti!);
     }
@@ -79,14 +97,22 @@ class _RubahHazardState extends State<RubahHazard> {
       appBar: AppBar(
         leading: IconButton(
           onPressed: () {
-            Navigator.pop(context);
+            Navigator.pop(context, true);
           },
           icon: const Icon(
             Icons.arrow_back_ios_new,
             color: Colors.white,
           ),
         ),
-        title: const Text("Detail Hazard"),
+        actions: [
+          IconButton(
+            onPressed: () {
+              _reload();
+            },
+            icon: const Icon(Icons.replay_circle_filled_rounded),
+          )
+        ],
+        title: const Text("Rubah Hazard"),
       ),
       body: _listWidget(),
     );
@@ -135,40 +161,17 @@ class _RubahHazardState extends State<RubahHazard> {
       child: BlocBuilder<GambarBloc, GambarState>(
         builder: (context, state) {
           if (state is ErrorGambar) {
-            return const Card(
-                margin:
-                    EdgeInsets.only(left: 10, right: 10, top: 10, bottom: 20),
-                elevation: 10,
-                child: Padding(
-                    padding: EdgeInsets.all(8.0),
-                    child: Center(
-                      child: Text("Gagal Memuat Gambar"),
-                    )));
-          } else if (state is LoadedGambar) {
             return Stack(
               children: [
-                Card(
-                    margin: const EdgeInsets.only(
+                const Card(
+                    margin: EdgeInsets.only(
                         left: 10, right: 10, top: 10, bottom: 20),
                     elevation: 10,
                     child: Padding(
-                      padding: const EdgeInsets.all(6.0),
-                      child: InkWell(
-                        onTap: () {
-                          Constants().goTo(
-                              () => ImageView(image: state.urlImg), context);
-                        },
-                        child: CachedNetworkImage(
-                          imageUrl: state.urlImg,
-                          fit: BoxFit.cover,
-                          placeholder: (contex, url) {
-                            return const Center(
-                              child: CircularProgressIndicator(),
-                            );
-                          },
-                        ),
-                      ),
-                    )),
+                        padding: EdgeInsets.all(8.0),
+                        child: Center(
+                          child: Text("Gagal Memuat Gambar"),
+                        ))),
                 Align(
                   alignment: Alignment.topRight,
                   child: Card(
@@ -179,7 +182,99 @@ class _RubahHazardState extends State<RubahHazard> {
                     margin: const EdgeInsets.only(right: 20, top: 20),
                     child: InkWell(
                         borderRadius: BorderRadius.circular(100),
-                        onTap: () {},
+                        onTap: () {
+                          buktiPicker();
+                        },
+                        child: const Padding(
+                          padding: EdgeInsets.all(6.0),
+                          child: Icon(
+                            Icons.mode_edit_outline_outlined,
+                            color: Color.fromARGB(255, 128, 125, 125),
+                          ),
+                        )),
+                  ),
+                )
+              ],
+            );
+          } else if (state is LoadingGambar) {
+            return Stack(
+              children: [
+                const Card(
+                    margin: EdgeInsets.only(
+                        left: 10, right: 10, top: 10, bottom: 20),
+                    elevation: 10,
+                    child: Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Center(
+                          child: CupertinoActivityIndicator(
+                            radius: 30,
+                          ),
+                        ))),
+                Align(
+                  alignment: Alignment.topRight,
+                  child: Card(
+                    elevation: 10,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(100),
+                    ),
+                    margin: const EdgeInsets.only(right: 20, top: 20),
+                    child: InkWell(
+                        borderRadius: BorderRadius.circular(100),
+                        onTap: () {
+                          buktiPicker();
+                        },
+                        child: const Padding(
+                          padding: EdgeInsets.all(6.0),
+                          child: Icon(
+                            Icons.mode_edit_outline_outlined,
+                            color: Color.fromARGB(255, 128, 125, 125),
+                          ),
+                        )),
+                  ),
+                )
+              ],
+            );
+          } else if (state is LoadedGambar) {
+            return Stack(
+              children: [
+                SizedBox(
+                  width: MediaQuery.of(context).size.width,
+                  child: Card(
+                      margin: const EdgeInsets.only(
+                          left: 10, right: 10, top: 10, bottom: 20),
+                      elevation: 10,
+                      child: Padding(
+                        padding: const EdgeInsets.all(6.0),
+                        child: InkWell(
+                          onTap: () {
+                            Constants().goTo(
+                                () => ImageView(image: state.urlImg), context);
+                          },
+                          child: CachedNetworkImage(
+                            imageUrl: state.urlImg,
+                            fit: BoxFit.fitWidth,
+                            placeholder: (contex, url) {
+                              return const Center(
+                                child: CircularProgressIndicator(),
+                              );
+                            },
+                          ),
+                        ),
+                      )),
+                ),
+                Align(
+                  alignment: Alignment.topRight,
+                  child: Card(
+                    elevation: 10,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(100),
+                    ),
+                    margin: const EdgeInsets.only(right: 20, top: 20),
+                    child: InkWell(
+                        borderRadius: BorderRadius.circular(100),
+                        onTap: () {
+                          buktiPicker();
+                        },
                         child: const Padding(
                           padding: EdgeInsets.all(6.0),
                           child: Icon(
@@ -212,31 +307,31 @@ class _RubahHazardState extends State<RubahHazard> {
             Container(
               width: MediaQuery.of(context).size.width,
               color: const Color.fromARGB(255, 6, 117, 10),
-              padding: const EdgeInsets.only(left: 10, right: 10),
+              padding: const EdgeInsets.all(10),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
+                children: const [
+                  Text(
                     "1. Data Temuan",
                     style: TextStyle(
                         color: Colors.white, fontWeight: FontWeight.bold),
                   ),
-                  Card(
-                    elevation: 10,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(100),
-                    ),
-                    child: InkWell(
-                        borderRadius: BorderRadius.circular(100),
-                        onTap: () {},
-                        child: const Padding(
-                          padding: EdgeInsets.all(6.0),
-                          child: Icon(
-                            Icons.mode_edit_outline_outlined,
-                            color: Color.fromARGB(255, 128, 125, 125),
-                          ),
-                        )),
-                  )
+                  // Card(
+                  //   elevation: 10,
+                  //   shape: RoundedRectangleBorder(
+                  //     borderRadius: BorderRadius.circular(100),
+                  //   ),
+                  //   child: InkWell(
+                  //       borderRadius: BorderRadius.circular(100),
+                  //       onTap: () {},
+                  //       child: const Padding(
+                  //         padding: EdgeInsets.all(6.0),
+                  //         child: Icon(
+                  //           Icons.mode_edit_outline_outlined,
+                  //           color: Color.fromARGB(255, 128, 125, 125),
+                  //         ),
+                  //       )),
+                  // )
                 ],
               ),
             ),
@@ -336,7 +431,19 @@ class _RubahHazardState extends State<RubahHazard> {
                 ),
                 child: InkWell(
                     borderRadius: BorderRadius.circular(100),
-                    onTap: () {},
+                    onTap: () async {
+                      bool status = await Constants().goTo(
+                          () => RubahBahaya(
+                                data: data,
+                                tipe: "bahaya",
+                              ),
+                          context);
+                      if (status) {
+                        _reload();
+                      } else {
+                        // Navigator.pop(context, false);
+                      }
+                    },
                     child: const Padding(
                       padding: EdgeInsets.all(6.0),
                       child: Icon(
@@ -370,34 +477,45 @@ class _RubahHazardState extends State<RubahHazard> {
         children: [
           Container(
             width: MediaQuery.of(context).size.width,
-            color: Colors.orangeAccent,
-            padding: const EdgeInsets.only(left: 10, right: 10),
-            child: Center(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    "Resiko Kemungkinan",
-                    style: TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold),
+            color: const Color.fromARGB(255, 134, 64, 255),
+            padding: const EdgeInsets.all(10),
+            margin: const EdgeInsets.only(bottom: 20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  "Metrik Resiko Sebelum",
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+                Card(
+                  elevation: 10,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(100),
                   ),
-                  Card(
-                    elevation: 10,
-                    shape: RoundedRectangleBorder(
+                  child: InkWell(
                       borderRadius: BorderRadius.circular(100),
-                    ),
-                    child: InkWell(
-                        borderRadius: BorderRadius.circular(100),
-                        onTap: () {},
-                        child: const Padding(
-                          padding: EdgeInsets.all(6.0),
-                          child: Icon(
-                            Icons.mode_edit_outline_outlined,
-                            color: Color.fromARGB(255, 128, 125, 125),
-                          ),
-                        )),
-                  )
-                ],
+                      onTap: () {},
+                      child: const Padding(
+                        padding: EdgeInsets.all(6.0),
+                        child: Icon(
+                          Icons.mode_edit_outline_outlined,
+                          color: Color.fromARGB(255, 128, 125, 125),
+                        ),
+                      )),
+                )
+              ],
+            ),
+          ),
+          Container(
+            width: MediaQuery.of(context).size.width,
+            color: Colors.orangeAccent,
+            padding: const EdgeInsets.all(10),
+            child: const Center(
+              child: Text(
+                "Resiko Kemungkinan",
+                style:
+                    TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
               ),
             ),
           ),
@@ -497,33 +615,12 @@ class _RubahHazardState extends State<RubahHazard> {
         Container(
           width: MediaQuery.of(context).size.width,
           color: Colors.red,
-          padding: const EdgeInsets.only(left: 10, right: 10),
-          child: Center(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  "Resiko Keparahan",
-                  style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold),
-                ),
-                Card(
-                  elevation: 10,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(100),
-                  ),
-                  child: InkWell(
-                      borderRadius: BorderRadius.circular(100),
-                      onTap: () {},
-                      child: const Padding(
-                        padding: EdgeInsets.all(6.0),
-                        child: Icon(
-                          Icons.mode_edit_outline_outlined,
-                          color: Color.fromARGB(255, 128, 125, 125),
-                        ),
-                      )),
-                )
-              ],
+          padding: const EdgeInsets.all(10),
+          child: const Center(
+            child: Text(
+              "Resiko Keparahan",
+              style:
+                  TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             ),
           ),
         ),
@@ -807,7 +904,21 @@ class _RubahHazardState extends State<RubahHazard> {
                 ),
                 child: InkWell(
                     borderRadius: BorderRadius.circular(100),
-                    onTap: () {},
+                    onTap: () async {
+                      bool status = await Constants().goTo(
+                          () => RubahBahaya(
+                                data: data,
+                                tipe: "tindakan",
+                              ),
+                          context);
+                      if (status) {
+                        if (widget.detail != null) {
+                          _reload();
+                        }
+                      } else {
+                        // Navigator.pop(context, false);
+                      }
+                    },
                     child: const Padding(
                       padding: EdgeInsets.all(6.0),
                       child: Icon(
@@ -936,33 +1047,72 @@ class _RubahHazardState extends State<RubahHazard> {
             child: BlocBuilder<ImgPerbaikanBloc, GambarState>(
               builder: (context, state) {
                 if (state is ErrorGambar) {
-                  return const Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: Center(
-                        child: Text("Gagal Memuat Gambar"),
-                      ));
+                  return Stack(
+                    children: const [
+                      Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Center(
+                            child: Text("Gagal Memuat Gambar"),
+                          )),
+                    ],
+                  );
                 } else if (state is LoadedGambar) {
-                  return Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: InkWell(
-                      onTap: () {
-                        Constants().goTo(
-                            () => ImageView(image: state.urlImg), context);
-                      },
-                      child: CachedNetworkImage(
-                        imageUrl: state.urlImg,
-                        fit: BoxFit.cover,
-                        placeholder: (contex, url) {
-                          return const Center(
-                            child: CircularProgressIndicator(),
-                          );
-                        },
+                  return Stack(
+                    children: [
+                      SizedBox(
+                        width: MediaQuery.of(context).size.width,
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: InkWell(
+                            onTap: () {
+                              Constants().goTo(
+                                  () => ImageView(image: state.urlImg),
+                                  context);
+                            },
+                            child: CachedNetworkImage(
+                              imageUrl: state.urlImg,
+                              fit: BoxFit.fitWidth,
+                              placeholder: (contex, url) {
+                                return const Center(
+                                  child: CircularProgressIndicator(),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
+                      Align(
+                        alignment: Alignment.topRight,
+                        child: Card(
+                          elevation: 10,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(100),
+                          ),
+                          margin: const EdgeInsets.only(right: 20, top: 20),
+                          child: InkWell(
+                              borderRadius: BorderRadius.circular(100),
+                              onTap: () {
+                                perbaikanPicker();
+                              },
+                              child: const Padding(
+                                padding: EdgeInsets.all(6.0),
+                                child: Icon(
+                                  Icons.mode_edit_outline_outlined,
+                                  color: Color.fromARGB(255, 128, 125, 125),
+                                ),
+                              )),
+                        ),
+                      )
+                    ],
                   );
                 }
-                return const Padding(
-                    padding: EdgeInsets.all(8.0), child: Icon(Icons.people));
+                return Stack(
+                  children: const [
+                    Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Icon(Icons.people)),
+                  ],
+                );
               },
             ),
           ),
@@ -973,9 +1123,44 @@ class _RubahHazardState extends State<RubahHazard> {
               elevation: 10,
               child: Padding(
                 padding: const EdgeInsets.all(8.0),
-                child: Text((data.keteranganUpdate != null)
-                    ? data.keteranganUpdate!
-                    : "-"),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text((data.keteranganUpdate != null)
+                        ? data.keteranganUpdate!
+                        : "-"),
+                    Card(
+                      elevation: 10,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(100),
+                      ),
+                      child: InkWell(
+                          borderRadius: BorderRadius.circular(100),
+                          onTap: () async {
+                            bool status = await Constants().goTo(
+                                () => RubahBahaya(
+                                      data: data,
+                                      tipe: "perbaikan",
+                                    ),
+                                context);
+                            if (status) {
+                              if (widget.detail != null) {
+                                _reload();
+                              }
+                            } else {
+                              // Navigator.pop(context, false);
+                            }
+                          },
+                          child: const Padding(
+                            padding: EdgeInsets.all(6.0),
+                            child: Icon(
+                              Icons.mode_edit_outline_outlined,
+                              color: Color.fromARGB(255, 128, 125, 125),
+                            ),
+                          )),
+                    )
+                  ],
+                ),
               ),
             ),
           )
@@ -987,6 +1172,38 @@ class _RubahHazardState extends State<RubahHazard> {
   Widget _rkemSetelah(Data data) {
     return Column(
       children: [
+        Container(
+          width: MediaQuery.of(context).size.width,
+          color: const Color.fromARGB(255, 134, 64, 255),
+          padding: const EdgeInsets.all(10),
+          margin: const EdgeInsets.only(bottom: 20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                "Metrik Resiko Sesudah",
+                style:
+                    TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+              Card(
+                elevation: 10,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(100),
+                ),
+                child: InkWell(
+                    borderRadius: BorderRadius.circular(100),
+                    onTap: () {},
+                    child: const Padding(
+                      padding: EdgeInsets.all(6.0),
+                      child: Icon(
+                        Icons.mode_edit_outline_outlined,
+                        color: Color.fromARGB(255, 128, 125, 125),
+                      ),
+                    )),
+              )
+            ],
+          ),
+        ),
         Container(
           width: MediaQuery.of(context).size.width,
           color: Colors.orangeAccent,
@@ -1324,5 +1541,277 @@ class _RubahHazardState extends State<RubahHazard> {
         ],
       ),
     );
+  }
+
+  pickerBtmSheet() {
+    return showModalBottomSheet(
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        useRootNavigator: true,
+        context: context,
+        builder: (context) {
+          return SizedBox(
+            height: 220,
+            child: Stack(
+              children: [
+                Card(
+                  margin: const EdgeInsets.only(top: 40),
+                  color: Colors.white,
+                  child: Padding(
+                      padding:
+                          const EdgeInsets.only(top: 20, left: 8, right: 8),
+                      child: ListView(
+                        children: [
+                          Card(
+                            elevation: 10,
+                            child: InkWell(
+                              onTap: () async {
+                                var img = await getImageCamera();
+                                if (img != null) {
+                                  Navigator.pop(context, img);
+                                }
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.all(20),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceEvenly,
+                                  children: const [
+                                    Icon(
+                                      Icons.camera_alt_rounded,
+                                    ),
+                                    Text("Camera"),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          Card(
+                            elevation: 10,
+                            child: InkWell(
+                              onTap: () async {
+                                var img = await getImageGallery();
+                                if (img != null) {
+                                  Navigator.pop(context, img);
+                                }
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.all(20),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceEvenly,
+                                  children: const [
+                                    Icon(Icons.image_search_rounded),
+                                    Text("Galeri"),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      )),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 15.0, right: 8.0),
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: Card(
+                        elevation: 20,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(150),
+                        ),
+                        child: InkWell(
+                          onTap: () {
+                            Navigator.pop(context);
+                          },
+                          customBorder: const CircleBorder(),
+                          child: const Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: Icon(Icons.keyboard_arrow_down),
+                          ),
+                        )),
+                  ),
+                )
+              ],
+            ),
+          );
+        });
+  }
+
+  Future<XFile?> getImageGallery() async {
+    var imageFile = await imagePicker.pickImage(source: ImageSource.gallery);
+    return imageFile;
+  }
+
+  Future<XFile?> getImageCamera() async {
+    var imageFile = await imagePicker.pickImage(source: ImageSource.camera);
+    return imageFile;
+  }
+
+  buktiPicker() async {
+    Constants().showAlert(
+      context,
+      dismiss: false,
+      loading: true,
+      enBtn: false,
+    );
+    XFile? bukti = await pickerBtmSheet();
+
+    if (bukti != null) {
+      var data = HazardGambarBukti();
+      data.buktiSebelum = File(bukti.path);
+      if (widget.detail != null) {
+        data.uid = widget.detail!.uid;
+      } else {
+        Navigator.pop(context, false);
+      }
+      await _repository.postGambarBukti(data, idDevice).then((response) async {
+        if (response != null) {
+          if (response.success) {
+            if (kDebugMode) {
+              print("uid : ${data.uid}");
+            }
+            await _repository.getHazardDetail(data.uid).then((res) {
+              if (res != null) {
+                var bukti = res.bukti;
+                _gambarBloc.tampilGambar(url: baseImage + bukti!);
+                if (kDebugMode) {
+                  print("data");
+                }
+                Navigator.pop(context, true);
+              } else {
+                if (kDebugMode) {
+                  print("error");
+                }
+                Navigator.pop(context, false);
+              }
+            });
+          } else {
+            if (kDebugMode) {
+              print("error 1");
+            }
+            Navigator.pop(context, false);
+          }
+        } else {
+          if (kDebugMode) {
+            print("error 2");
+          }
+          Navigator.pop(context, false);
+        }
+      }).catchError((onError) {
+        if (kDebugMode) {
+          print("error 3 $onError");
+        }
+        Navigator.pop(context, false);
+      });
+    } else {
+      if (kDebugMode) {
+        print("error 4");
+      }
+      Navigator.pop(context, false);
+    }
+  }
+
+  perbaikanPicker() async {
+    Constants().showAlert(
+      context,
+      dismiss: false,
+      loading: true,
+      enBtn: false,
+    );
+    XFile? imgPerbaikan = await pickerBtmSheet();
+
+    if (imgPerbaikan != null) {
+      var data = HazardGambarPerbaikan();
+      data.buktiSelesai = File(imgPerbaikan.path);
+      if (widget.detail != null) {
+        data.uid = widget.detail!.uid;
+      } else {
+        Navigator.pop(context, false);
+      }
+      await _repository
+          .postGambarPerbaikan(data, idDevice)
+          .then((response) async {
+        if (response != null) {
+          if (response.success) {
+            if (kDebugMode) {
+              print("uid : ${data.uid}");
+            }
+            await _repository.getHazardDetail(data.uid).then((res) {
+              if (res != null) {
+                var img = res.updateBukti;
+                _imgPerbaikanBloc.tampilGambar(baseImage + "update/" + img!);
+                if (kDebugMode) {
+                  print("data");
+                }
+                Navigator.pop(context, true);
+              } else {
+                if (kDebugMode) {
+                  print("error");
+                }
+                Navigator.pop(context, false);
+              }
+            });
+          } else {
+            if (kDebugMode) {
+              print("error 1");
+            }
+            Navigator.pop(context, false);
+          }
+        } else {
+          if (kDebugMode) {
+            print("error 2");
+          }
+          Navigator.pop(context, false);
+        }
+      }).catchError((onError) {
+        if (kDebugMode) {
+          print("error 3 $onError");
+        }
+        Navigator.pop(context, false);
+      });
+    } else {
+      if (kDebugMode) {
+        print("error 4");
+      }
+      Navigator.pop(context, false);
+    }
+  }
+
+  initIdDevice() async {
+    String? _idDevice;
+    try {
+      _idDevice = await PlatformDeviceId.getDeviceId;
+      if (mounted) {
+        setState(() {
+          idDevice = _idDevice;
+        });
+      }
+    } on PlatformException {
+      if (kDebugMode) {
+        print("ERROR");
+      }
+    }
+  }
+
+  _reload() async {
+    Constants().showAlert(
+      context,
+      dismiss: false,
+      loading: true,
+      enBtn: false,
+    );
+    if (widget.detail != null) {
+      var uid = widget.detail!.uid;
+      await _repository.getHazardDetail(uid).then((res) {
+        _gambarBloc.tampilGambar(url: baseImage + res!.bukti!);
+        _imgPerbaikanBloc
+            .tampilGambar(baseImage + "update/" + res.updateBukti!);
+        setState(() {
+          data = res;
+        });
+        Navigator.pop(context, true);
+      });
+    }
   }
 }

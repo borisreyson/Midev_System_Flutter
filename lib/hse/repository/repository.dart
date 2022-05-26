@@ -1,5 +1,6 @@
 import 'package:midev_system_fl/hse/models/all_hazard_model.dart';
 import 'package:midev_system_fl/hse/models/counter_hazard.dart';
+import 'package:midev_system_fl/hse/models/data_hazard.dart';
 import 'package:midev_system_fl/hse/models/hazard_post.dart';
 import 'package:midev_system_fl/hse/models/hazard_user.dart';
 import 'package:midev_system_fl/hse/models/kemungkinan_model.dart';
@@ -111,5 +112,21 @@ class HazardRepository {
       username, disetujui, page, dari, sampai) async {
     return await _provider.getHazardUser(
         username, disetujui, page, dari, sampai);
+  }
+
+  Future<Data?> getHazardDetail(uid) async {
+    return await _provider.getHazardDetail(uid);
+  }
+
+  Future<ResultHazardPost?> postGambarBukti(data, idDevice) async {
+    return await _provider.postGambarBukti(data, idDevice);
+  }
+
+  Future<ResultHazardPost?> postGambarPerbaikan(data, idDevice) async {
+    return await _provider.postGambarPerbaikan(data, idDevice);
+  }
+
+  Future<ResultHazardPost?> postUpdateDeskripsi(uid, tipe, deskripsi) async {
+    return await _provider.postUpdateDeskripsi(uid, tipe, deskripsi);
   }
 }

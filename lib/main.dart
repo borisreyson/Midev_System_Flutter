@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:midev_system_fl/AnimatedLoading.dart';
+import 'package:midev_system_fl/animated_loading.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();

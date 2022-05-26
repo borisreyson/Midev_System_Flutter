@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
-import 'package:midev_system_fl/landing.dart';
 import 'package:midev_system_fl/service/api_service.dart';
 import 'package:midev_system_fl/service/izin_kamera.dart';
 import 'package:permission_handler/permission_handler.dart' as handler;
+import 'package:flutter/material.dart';
+import 'package:midev_system_fl/landing.dart';
 
 class AnimatedLoading extends StatefulWidget {
   const AnimatedLoading({Key? key}) : super(key: key);

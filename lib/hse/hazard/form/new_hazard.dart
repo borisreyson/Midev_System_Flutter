@@ -2033,7 +2033,7 @@ class _FormHazardState extends State<FormHazard> {
   buktiPicker() async {
     XFile? bukti = await pickerBtmSheet();
     if (bukti != null) {
-      _gambarBloc.tampilGambar(bukti.path);
+      _gambarBloc.tampilGambar(url: bukti.path);
       setState(() {
         _foto = bukti;
       });

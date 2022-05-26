@@ -18,7 +18,7 @@ class _ImageViewState extends State<ImageView> {
   @override
   void initState() {
     _gambarBloc = GambarBloc();
-    _gambarBloc.tampilGambar(widget.image);
+    _gambarBloc.tampilGambar(url: widget.image);
     super.initState();
   }
 

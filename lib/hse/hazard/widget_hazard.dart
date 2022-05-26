@@ -8,6 +8,7 @@ import 'package:midev_system_fl/hse/provider/provider.dart';
 import 'package:midev_system_fl/utils/constants.dart';
 
 class WidgetHazard extends StatefulWidget {
+  // ignore: prefer_typing_uninitialized_variables
   final data;
   final String? _rule;
   final String username;
@@ -159,9 +160,9 @@ class _WidgetHazardState extends State<WidgetHazard> {
               ),
               Visibility(
                 visible: (widget.data.keteranganAdmin != null)
-                    ? (__status == "Disetujui")
-                        ? false
-                        : true
+                    ? (__status == "Dibatalkan")
+                        ? true
+                        : false
                     : false,
                 child: Container(
                   width: MediaQuery.of(context).size.width,
@@ -337,12 +338,17 @@ class _WidgetHazardState extends State<WidgetHazard> {
                         Constants().showAlert(context,
                             dismiss: false, loading: true, enBtn: false);
 
-                        await Constants().goTo(
+                        bool stat = await Constants().goTo(
                             () => RubahHazard(
                                   detail: widget.data,
                                 ),
                             context);
-                        Navigator.pop(context);
+                        if (stat) {
+                          Navigator.pop(context, stat);
+                          widget.onRefresh(s: stat);
+                        } else {
+                          Navigator.pop(context, stat);
+                        }
                       }
                     },
                     child: const Text("Rubah")),

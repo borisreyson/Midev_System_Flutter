@@ -127,3 +127,49 @@ class HazardUpdate {
     return data;
   }
 }
+
+class HazardGambarBukti {
+  File? buktiSebelum;
+  String? uid;
+
+  HazardGambarBukti({
+    this.buktiSebelum,
+    this.uid,
+  });
+
+  factory HazardGambarBukti.fromJson(Map<String, dynamic> object) {
+    return HazardGambarBukti(
+      buktiSebelum: object["bukti_sebelum"],
+      uid: object["uid"],
+    );
+  }
+  Map<String, dynamic> toJson() {
+    Map<String, dynamic> data = <String, dynamic>{};
+    data['bukti_sebelum'] = buktiSebelum;
+    data['uid'] = uid;
+    return data;
+  }
+}
+
+class HazardGambarPerbaikan {
+  File? buktiSelesai;
+  String? uid;
+
+  HazardGambarPerbaikan({
+    this.buktiSelesai,
+    this.uid,
+  });
+
+  factory HazardGambarPerbaikan.fromJson(Map<String, dynamic> object) {
+    return HazardGambarPerbaikan(
+      buktiSelesai: object["bukti_selesai"],
+      uid: object["uid"],
+    );
+  }
+  Map<String, dynamic> toJson() {
+    Map<String, dynamic> data = <String, dynamic>{};
+    data['bukti_selesai'] = buktiSelesai;
+    data['uid'] = uid;
+    return data;
+  }
+}
